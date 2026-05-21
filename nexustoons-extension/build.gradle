@@ -1,0 +1,16 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+
+ext {
+    extName = 'NexusToons'
+    pkgNameSuffix = 'pt.nexustoons'
+    extClass = '.NexusToons'
+    extVersionCode = 1
+    isNsfw = false
+}
+
+apply from: "$rootDir/common.gradle"
+
+dependencies {
+    implementation(project(':lib-multisrc:madara'))
+}
