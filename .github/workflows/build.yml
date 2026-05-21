@@ -21,12 +21,16 @@ jobs:
           repository: keiyoushi/extensions-source
           path: extensions-source
 
+      - name: Verificar estrutura do extensions-source
+        run: |
+          ls extensions-source/
+          ls extensions-source/src/pt/ || echo "pasta pt nao existe"
+
       - name: Copiar extensão para o projeto base
         run: |
           mkdir -p extensions-source/src/pt/nexustoons
           cp -r extension/nexustoons-extension/src extensions-source/src/pt/nexustoons/
           cp extension/nexustoons-extension/build.gradle extensions-source/src/pt/nexustoons/build.gradle
-          ls extensions-source/src/pt/nexustoons/
 
       - name: Setup JDK 17
         uses: actions/setup-java@v4
