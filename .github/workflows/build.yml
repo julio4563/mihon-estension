@@ -1,0 +1,79 @@
+name: Build NexusToons Extension
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v4
+        with:
+          path: extension
+
+      - name: Checkout extensions-source
+        uses: actions/checkout@v4
+        with:
+          repository: keiyoushi/extensions-source
+          path: extensions-source
+
+      - name: Copiar extensão para o projeto base
+        run: |
+          mkdir -p extensions-source/src/pt/nexustoons
+          cp -r extension/nexustoons-extension/src extensions-source/src/pt/nexustoons/src
+          cp extension/nexustoons-extension/build.gradle extensions-source/src/pt/nexustoons/build.gradle
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Decode Keystore
+        working-directory: extensions-source
+        env:
+          KEY_STORE: ${{ secrets.KEY_STORE }}
+        run: |
+          echo "$KEY_STORE" | base64 -d > keystore.jks
+
+      - name: Build APK
+        working-directory: extensions-source
+        env:
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :src:pt:nexustoons:assembleRelease \
+            -Pandroid.injected.signing.store.file=$(pwd)/keystore.jks \
+            -Pandroid.injected.signing.store.password=$KEY_STORE_PASSWORD \
+            -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
+            -Pandroid.injected.signing.key.password=$KEY_PASSWORD
+
+      - name: Encontrar APK
+        id: find_apk
+        run: |
+          APK=$(find extensions-source -name "*.apk" | head -1)
+          echo "apk_path=$APK" >> $GITHUB_OUTPUT
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexustoons-extension
+          path: ${{ steps.find_apk.outputs.apk_path }}
+
+      - name: Criar Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: "NexusToons v${{ github.run_number }}"
+          files: ${{ steps.find_apk.outputs.apk_path }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
